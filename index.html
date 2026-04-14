@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth System FastAPI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 h-screen flex items-center justify-center">
+
+    <div id="app-card" class="bg-white p-8 rounded-lg shadow-md w-96">
+        <h2 id="title" class="text-2xl font-bold mb-6 text-center text-blue-600">Entrar no Sistema</h2>
+        
+        <div id="auth-form" class="space-y-4">
+            <input type="email" id="email" placeholder="E-mail" class="w-full p-2 border rounded outline-none focus:border-blue-500">
+            <input type="password" id="password" placeholder="Senha" class="w-full p-2 border rounded outline-none focus:border-blue-500">
+            <button onclick="handleAuth()" id="btn-main" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition">
+                Entrar
+            </button>
+        </div>
+
+        <p id="message" class="mt-4 text-sm text-center font-medium min-h-[1.25rem]"></p>
+
+        <p id="toggle-container" class="mt-6 text-xs text-center text-gray-500">
+            <span id="toggle-text">Não tem conta?</span> 
+            <a href="javascript:void(0)" onclick="toggleMode()" id="toggle-link" class="text-blue-500 underline">Criar conta</a>
+        </p>
+    </div>
+
+    <script>
+        let isLogin = true;
+        const API_URL = "http://127.0.0.1:8000";
+
+        function toggleMode() {
+            isLogin = !isLogin;
+            document.getElementById('title').innerText = isLogin ? "Entrar no Sistema" : "Criar conta";
+            document.getElementById('btn-main').innerText = isLogin ? "Entrar" : "Registrar";
+            document.getElementById('toggle-text').innerText = isLogin ? "Não tem conta?" : "Já tem conta?";
+            document.getElementById('toggle-link').innerText = isLogin ? "Criar conta" : "Fazer Login";
+            document.getElementById('message').innerText = "";
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const msgElement = document.getElementById('message');
+            const endpoint = isLogin ? "/login" : "/register";
+
+            try {
+                const response = await fetch(API_URL + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (isLogin) {
+                        localStorage.setItem('token', data.access_token);
+                        // Após o login, buscamos os dados detalhados do usuário
+                        fetchUserData(data.access_token);
+                    } else {
+                        msgElement.className = "mt-4 text-sm text-center text-green-600";
+                        msgElement.innerText = "Conta criada! Verifique seu e-mail no Mailtrap.";
+                    }
+                } else {
+                    msgElement.className = "mt-4 text-sm text-center text-red-500";
+                    msgElement.innerText = data.detail || "Erro na operação";
+                }
+            } catch (error) {
+                msgElement.innerText = "Erro de conexão com o servidor.";
+            }
+        }
+
+        async function fetchUserData(token) {
+            try {
+                // Chamada para a rota protegida /users/me que criamos no main.py
+                const response = await fetch(`${API_URL}/users/me?token=${token}`);
+                const userData = await response.json();
+                
+                if (response.ok) {
+                    showDashboard(userData);
+                }
+            } catch (error) {
+                console.error("Erro ao carregar dados do usuário");
+            }
+        }
+
+        function showDashboard(user) {
+            document.getElementById('app-card').innerHTML = `
+                <h2 class="text-2xl font-bold mb-4 text-center text-green-600">Bem-vindo!</h2>
+                <div class="space-y-4 text-gray-700">
+                    <p class="text-sm"><strong>E-mail:</strong> ${user.email}</p>
+                    <p class="text-sm"><strong>ID do Usuário:</strong> ${user.id}</p>
+                    <div class="p-4 bg-green-50 rounded border border-green-200 text-sm text-green-800">
+                        <strong>Status:</strong> Conta Verificada 
+                    </div>
+                    <button onclick="logout()" class="w-full bg-red-400 text-white p-2 rounded hover:bg-red-500 transition">
+                        Sair
+                    </button>
+                </div>
+            `;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            location.reload();
+        }
+    </script>
+</body>
+</html>
