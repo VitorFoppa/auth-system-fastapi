@@ -58,7 +58,6 @@
                 if (response.ok) {
                     if (isLogin) {
                         localStorage.setItem('token', data.access_token);
-                        // Após o login, buscamos os dados detalhados do usuário
                         fetchUserData(data.access_token);
                     } else {
                         msgElement.className = "mt-4 text-sm text-center text-green-600";
@@ -75,7 +74,6 @@
 
         async function fetchUserData(token) {
             try {
-                // Chamada para a rota protegida /users/me que criamos no main.py
                 const response = await fetch(`${API_URL}/users/me?token=${token}`);
                 const userData = await response.json();
                 
